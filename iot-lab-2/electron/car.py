@@ -1,6 +1,8 @@
 import time
+import math
 from picarx import Picarx
 from robot_hat.utils import get_battery_voltage
+
 
 class Car:
     def __init__(self):
@@ -18,10 +20,18 @@ class Car:
 
     def update_battery_voltage(self):
         self.battery_voltage = get_battery_voltage()
+        
+    def calc_bat_percentage(self):
+        if self.battery_voltage is None:
+            self.update_battery_voltage()
+        v = self.battery_voltage/2
+        percentage = int(100 / 1+ math.e ** (-15 * (v - 3.7)) )
+        
+        return str(max(0, min(100, percentage)))
 
     def get_status(self):
         self.update_battery_voltage()
-        return f"sts {self.battery_voltage:.2f} {self.direction} {self.turning}"
+        return f"sts {self.calc_bat_percentage()} {self.direction} {self.turning}"
 
     def forward(self, amount=1):
         self.px.set_dir_servo_angle(0)
