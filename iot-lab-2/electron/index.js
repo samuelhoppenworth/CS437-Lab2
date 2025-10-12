@@ -64,7 +64,6 @@ function connectToServer() {
     socketClient.on('data', (data) => {
         const message = data.toString().trim();
         console.log("Received from server:", message);
-        document.getElementById("bluetooth").innerText = message; // Show raw message
 
         const status = parseServerStatus(message);
         if (status) {
