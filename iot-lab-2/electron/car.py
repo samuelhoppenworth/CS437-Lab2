@@ -56,6 +56,7 @@ class Car:
             self.px.forward(30)
             time.sleep(1.5)
             self.px.forward(0)
+        self.direction = 1
         self.turning = False
 
     def rTurn(self, fixpos=True):
@@ -76,6 +77,7 @@ class Car:
             self.px.forward(30)
             time.sleep(1.5)
             self.px.forward(0)
+        self.direction = 1
         self.turning = False
         
     def stop(self):
