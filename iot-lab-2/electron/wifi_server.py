@@ -1,4 +1,5 @@
 import socket
+from time import sleep
 from picarx import Picarx
 from robot_hat.utils import get_battery_voltage
 
@@ -36,17 +37,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         while 1:
             client, clientInfo = s.accept()
             print("server recv from: ", clientInfo)
-            
-            # Get binary data from client
-            # data = client.recv(1024)      
-            # if data != b"":
-                # print(data)     
-                # client.sendall(data)
-                
-            # Send car status to client
-            car_status = car.get_status().encode('utf-8')
-            client.sendall(car_status)
-            
+            with client:
+                # Get binary data from client
+                # data = client.recv(1024)      
+                # if data != b"":
+                    # print(data)     
+                    # client.sendall(data)
+                    
+                # Send car status to client
+                car_status = car.get_status().encode('utf-8')
+                client.sendall(car_status)
+                sleep(0.5)
     except: 
         print("\nClosing socket")
         client.close()
