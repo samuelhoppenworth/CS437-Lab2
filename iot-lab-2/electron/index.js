@@ -1,10 +1,14 @@
+// --- Global State Variables ---
+var server_port;
+var server_addr;
+var socketClient = null; // This will hold our single, persistent socket connection
+var isKeyDown = false;   // Prevents message flooding from holding a key down
+
+// --- Event Listeners ---
 document.onkeydown = updateKey;
 document.onkeyup = resetKey;
 
-var server_port;
-var server_addr;
-
-// This function runs when the window loads to get the server details.
+// Runs when the app loads
 window.onload = function() {
     swal({
         title: "Enter Raspberry Pi Details",
@@ -19,7 +23,7 @@ window.onload = function() {
                 `
             }
         },
-        buttons: { confirm: { text: "Save", value: true } }
+        buttons: { confirm: { text: "Save and Connect", value: true } }
     }).then((value) => {
         if (value) {
             server_addr = document.getElementById("swal-input-ip").value;
@@ -27,7 +31,8 @@ window.onload = function() {
             if (!server_addr || !server_port) {
                 swal("Error", "IP address and port are required.", "error");
             } else {
-                swal("Saved!", `The application will connect to ${server_addr}:${server_port}`, "success");
+                swal("Saved!", `Attempting to connect to ${server_addr}:${server_port}`, "info");
+                connectToServer(); // Automatically connect after getting details
             }
         } else {
              swal("Cancelled", "Connection details not provided.", "warning");
@@ -35,74 +40,105 @@ window.onload = function() {
     });
 };
 
-
-function parseServerStatus(message) {
-  if (typeof message !== 'string' || !message.startsWith('sts ')) {
-    return null;
-  }
-
-  const parts = message.split(' ');
-  if (parts.length !== 4) {
-    console.error("Malformed status message received:", message);
-    return null;
-  }
-
-  try {
-    const status = {
-      batteryVoltage: parseFloat(parts[1]),
-      direction: parseInt(parts[2], 10),
-      turning: parts[3].toLowerCase() === 'true'
-    };
-
-    // Final check to ensure the numbers were parsed correctly
-    if (isNaN(status.batteryVoltage) || isNaN(status.direction)) {
-      console.error("Failed to parse numeric values from status:", message);
-      return null;
-    }
-    return status;
-  } catch (error) {
-    console.error("Error parsing server status:", error);
-    return null;
-  }
-}
-
-function sendMessageToServer(message) {
-    if (!server_addr || !server_port) {
-        console.error("Server address or port not set.");
+/**
+ * Creates and manages the single, persistent connection to the server.
+ */
+function connectToServer() {
+    // If we are already connected or connecting, do nothing.
+    if (socketClient) {
+        console.log("Already connected or attempting to connect.");
         return;
     }
-    
+
     const net = require('net');
-    const client = net.createConnection({ port: server_port, host: server_addr }, () => {
-        console.log('Connected. Sending message:', message);
-        client.write(`${message}\r\n`);
-    });
+    socketClient = new net.Socket();
     
-    client.on('data', (data) => {
+    // --- Setup Event Listeners ONCE for the persistent socket ---
+
+    // This event fires when the connection is successfully established.
+    socketClient.on('connect', () => {
+        console.log('Connection established with server!');
+    });
+
+    // This event fires whenever data is received from the server.
+    socketClient.on('data', (data) => {
         const message = data.toString().trim();
         console.log("Received from server:", message);
+        document.getElementById("bluetooth").innerText = message; // Show raw message
 
         const status = parseServerStatus(message);
-
         if (status) {
-            document.getElementById("temperature").innerText = status.batteryVoltage.toFixed(2) + ' V';
-            document.getElementById("direction").innerText = `Direction Code: ${status.direction}`;
-            document.getElementById("speed").innerText = `Is Turning: ${status.turning}`;
-
+            // Update the UI with the parsed data
+            document.getElementById("voltage").innerText = status.batteryVoltage.toFixed(2);
+            document.getElementById("direction").innerText = status.direction;
+            document.getElementById("turning").innerText = status.turning;
         }
-        client.end();
     });
 
-    client.on('end', () => console.log('Disconnected from server.'));
+    // This event fires when the server closes the connection.
+    socketClient.on('close', () => {
+        console.log('Connection closed by server.');
+        document.getElementById("connection_status").innerText = "Disconnected";
+        document.getElementById("connection_status_dot").style.color = "red";
+        document.getElementById("connectButton").disabled = false;
+        socketClient = null; // Clear the socket object
+    });
 
-    client.on('error', (err) => {
+    // This event fires when a connection error occurs.
+    socketClient.on('error', (err) => {
         console.error(`Connection error: ${err.message}`);
         swal("Connection Failed", `Could not connect. Check the server and your connection.`, "error");
+        socketClient.destroy(); // Ensure the socket is destroyed on error
+        document.getElementById("connection_status").innerText = "Error";
+        document.getElementById("connection_status_dot").style.color = "red";
+        document.getElementById("connectButton").disabled = false;
+        socketClient = null; // Clear the socket object
     });
+
+    // Initiate the connection
+    socketClient.connect(server_port, server_addr);
+}
+
+/**
+ * Parses the status message from the server.
+ */
+function parseServerStatus(message) {
+    if (typeof message !== 'string' || !message.startsWith('sts ')) {
+        return null;
+    }
+    const parts = message.split(' ');
+    if (parts.length !== 4) return null;
+
+    try {
+        return {
+            batteryVoltage: parseFloat(parts[1]),
+            direction: (['stopped', 'forward', 'backward', 'left', 'right'][parseInt(parts[2], 10)] || 'unknown'),
+            turning: (parts[3].toLowerCase() === 'true').toString()
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Sends a message over the persistent socket connection.
+ */
+function sendMessageToServer(message) {
+    // Only send if the socket exists and is writable
+    if (socketClient && socketClient.writable) {
+        console.log('Sending message:', message);
+        socketClient.write(`${message}\r\n`);
+    } else {
+        console.error('Not connected. Cannot send message.');
+    }
 }
 
 // Handles keyboard presses to control the car.
 function updateKey(e) {
+    // If a key is already being held down, do nothing.
+    if (isKeyDown) return; 
+    isKeyDown = true;
+
     e = e || window.event;
     let key = e.keyCode.toString();
 
@@ -115,7 +151,9 @@ function updateKey(e) {
     }
 }
 
+// Handles key releases to stop the car.
 function resetKey(e) {
+    isKeyDown = false;
     e = e || window.event;
     document.getElementById("upArrow").style.color = "grey";
     document.getElementById("downArrow").style.color = "grey";

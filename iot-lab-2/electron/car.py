@@ -25,42 +25,22 @@ class Car:
 
     def forward(self, amount=1):
         self.px.set_dir_servo_angle(0)
+        self.direction = 1
         for _ in range(amount):
             self.px.forward(50)
             time.sleep(0.192)
         self.px.forward(0)
-        self.direction = 1 # forward
 
     def backward(self, amount=1):
         self.px.set_dir_servo_angle(0)
+        self.direction = 2
         self.px.backward(50)
         time.sleep(0.385 * amount)
         self.px.backward(0)
-        self.direction = 2 # backward
-
-    def rTurn(self, fixpos=True):
-        self.turning = True
-        if fixpos:
-            for _ in range(4):
-                self.px.set_dir_servo_angle(45)
-                self.px.forward(30)
-                time.sleep(0.285)
-                self.px.set_dir_servo_angle(-45)
-                self.px.backward(30)
-                time.sleep(0.290)
-                self.px.backward(0)
-                self.px.set_dir_servo_angle(0)
-        else:
-            self.px.set_dir_servo_angle(45)
-            self.px.forward(30)
-            time.sleep(1.5)
-            self.px.forward(0)
-
-        self.direction = 4  # right
-        self.turning = False
 
     def lTurn(self, fixpos=True):
         self.turning = True
+        self.direction = 3
         if fixpos:
             for _ in range(4):
                 self.px.set_dir_servo_angle(-45)
@@ -76,6 +56,29 @@ class Car:
             self.px.forward(30)
             time.sleep(1.5)
             self.px.forward(0)
-
-        self.direction = 3  # left
         self.turning = False
+
+    def rTurn(self, fixpos=True):
+        self.turning = True
+        self.direction = 4
+        if fixpos:
+            for _ in range(4):
+                self.px.set_dir_servo_angle(45)
+                self.px.forward(30)
+                time.sleep(0.285)
+                self.px.set_dir_servo_angle(-45)
+                self.px.backward(30)
+                time.sleep(0.290)
+                self.px.backward(0)
+                self.px.set_dir_servo_angle(0)
+        else:
+            self.px.set_dir_servo_angle(45)
+            self.px.forward(30)
+            time.sleep(1.5)
+            self.px.forward(0)
+        self.turning = False
+        
+    def stop(self):
+        self.px.stop()
+        self.turning = False
+        self.speed = 0
