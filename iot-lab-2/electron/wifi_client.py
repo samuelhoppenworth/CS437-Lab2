@@ -1,0 +1,25 @@
+import socket
+import time
+
+HOST = input("Enter the Raspberry Pi's IP address or hostname: ")
+PORT = int(input("Enter the port number: "))
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+    s.settimeout(5.0)
+    print(f"Connected to server {HOST}:{PORT}")
+
+    try:
+        while True:
+            data = s.recv(1024)
+            if not data:
+                print("Server closed connection.")
+                break
+            print("from server:", data.decode("utf-8"))
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("\nClient exiting...")
+    except socket.timeout:
+        print("Timed out waiting for data.")
+    finally:
+        s.close()
