@@ -1,7 +1,6 @@
 import socket
 from time import sleep
-from picarx import Picarx
-from robot_hat.utils import get_battery_voltage
+from car import Car
 import argparse
 
 parser = argparse.ArgumentParser(description='Start the Picarx server.')
@@ -11,28 +10,6 @@ args = parser.parse_args()
 
 HOST = args.host
 PORT = args.port
-
-class Car:
-    def __init__(self):
-        self.px = Picarx()
-        self.speed = 0
-        self.turning = False
-        self.direction = 1
-        self.battery_voltage = None
-
-    def update_speed(self, value):
-        self.speed = value
-
-    def update_turning(self, turning_status):
-        self.turning = turning_status
-    
-    def update_battery_voltage(self):
-        self.battery_voltage = get_battery_voltage()
-                
-    def get_status(self):
-        self.update_battery_voltage()
-        return f"sts {self.battery_voltage} {self.direction} {self.turning}"
-
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
@@ -48,31 +25,42 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             with client:
                 while True:
                     try:
-                        # check if client still connected
-                        client.settimeout(0.5)
                         data = client.recv(1024)
-                        if data == b'':
+                        if not data:
                             print("Client disconnected")
+                            car.stop()
                             break
-                        elif data:
-                            print("Received:", data.decode())
                         
-                        # send status
+                        message = data.decode().strip()
+                        print("Received:", message)
+
+                        # Call the correct car function based on the message
+                        if message == '87':       # W key for Forward
+                            car.forward()
+                        elif message == '83':     # S key for Backward
+                            car.backward()
+                        elif message == '65':     # A key for Left Turn
+                            car.lTurn()
+                        elif message == '68':     # D key for Right Turn
+                            car.rTurn()
+                        elif message == 'stop':   # Sent when a key is released
+                            car.stop()
+
                         car_status = car.get_status().encode('utf-8')
                         print("Sending:", car_status)
                         client.sendall(car_status)
-                        sleep(0.5)
 
-                    except socket.timeout:
-                        car_status = car.get_status().encode('utf-8')
-                        client.sendall(car_status)
-                        sleep(0.5)
                     except (ConnectionResetError, BrokenPipeError):
                         print("Client forcibly closed connection.")
+                        car.stop()
+                        break
+                    except Exception as e:
+                        print(f"An error occurred: {e}")
+                        car.stop()
                         break
 
     except KeyboardInterrupt:
         print("\nShutting down server.")
     finally:
-        car.px.stop()
+        car.stop()
         s.close()

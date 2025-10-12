@@ -35,11 +35,7 @@ window.onload = function() {
     });
 };
 
-/**
- * Parses the status message from the server (e.g., "sts 8.1 1 False").
- * @param {string} message The raw message string.
- * @returns {object|null} A structured object with parsed data or null if the format is invalid.
- */
+
 function parseServerStatus(message) {
   if (typeof message !== 'string' || !message.startsWith('sts ')) {
     return null;
