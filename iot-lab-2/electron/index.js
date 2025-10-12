@@ -1,7 +1,6 @@
 document.onkeydown = updateKey;
 document.onkeyup = resetKey;
 
-// These will be set by the popup when the app loads.
 var server_port;
 var server_addr;
 
@@ -12,7 +11,6 @@ var server_addr;
 window.onload = function() {
     swal({
         title: "Enter Raspberry Pi Details",
-        // This dynamically creates the input fields inside the alert
         content: {
             element: "div",
             attributes: {
@@ -46,22 +44,15 @@ window.onload = function() {
                 swal("Saved!", `The application will now connect to ${server_addr}:${server_port}`, "success");
             }
         } else {
-             swal("Cancelled", "Connection details not provided. The app may not work.", "warning");
+             swal("Cancelled", "Connection details not provided.", "warning");
         }
     });
 };
 
 
-/**
- * The client function now uses the globally set server_addr and server_port
- * variables that were populated by the initial popup.
- */
 function client(){
-    // Check if the server details have been set
     if (!server_addr || !server_port) {
         console.error("Server address or port not set.");
-        // Optionally alert the user again
-        // swal("Connection Error", "Please restart and enter the Raspberry Pi details.", "error");
         return;
     }
     
@@ -69,9 +60,7 @@ function client(){
     var input = document.getElementById("message").value;
 
     const client = net.createConnection({ port: server_port, host: server_addr }, () => {
-        // 'connect' listener.
         console.log('connected to server!');
-        // send the message
         client.write(`${input}\r\n`);
     });
     
@@ -89,7 +78,6 @@ function client(){
 
     client.on('error', (err) => {
         console.error(`Connection error: ${err.message}`);
-        // Let the user know the connection failed
         swal("Connection Failed", `Could not connect to ${server_addr}:${server_port}. Please check the details and restart.`, "error");
     });
 }
@@ -130,7 +118,6 @@ function resetKey(e) {
 }
 
 
-// Function to send data, assuming it's similar to client()
 function send_data(message) {
     if (!server_addr || !server_port) {
         console.error("Server address or port not set.");
