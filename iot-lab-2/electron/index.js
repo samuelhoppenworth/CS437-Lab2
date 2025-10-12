@@ -1,10 +1,8 @@
-// --- Global State Variables ---
 var server_port;
 var server_addr;
-var socketClient = null; // This will hold our single, persistent socket connection
-var isKeyDown = false;   // Prevents message flooding from holding a key down
+var socketClient = null;
+var isKeyDown = false;
 
-// --- Event Listeners ---
 document.onkeydown = updateKey;
 document.onkeyup = resetKey;
 
@@ -44,7 +42,6 @@ window.onload = function() {
  * Creates and manages the single, persistent connection to the server.
  */
 function connectToServer() {
-    // If we are already connected or connecting, do nothing.
     if (socketClient) {
         console.log("Already connected or attempting to connect.");
         return;
@@ -53,8 +50,6 @@ function connectToServer() {
     const net = require('net');
     socketClient = new net.Socket();
     
-    // --- Setup Event Listeners ONCE for the persistent socket ---
-
     // This event fires when the connection is successfully established.
     socketClient.on('connect', () => {
         console.log('Connection established with server!');
