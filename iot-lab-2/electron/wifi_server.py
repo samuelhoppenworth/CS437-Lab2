@@ -3,8 +3,8 @@ from time import sleep
 from picarx import Picarx
 from robot_hat.utils import get_battery_voltage
 
-HOST = "10.0.0.218"     # IP address of your Raspberry PI
-PORT = 65432          # Port to listen on (non-privileged ports are > 1023)
+HOST = "10.0.0.218"
+PORT = 65432
 
 class Car:
     def __init__(self):
@@ -31,27 +31,42 @@ class Car:
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
     s.listen()
-
     car = Car()
+    print(f"Server listening on {HOST}:{PORT}")
+
     try:
-        while 1:
+        while True:
             client, clientInfo = s.accept()
-            print("server recv from: ", clientInfo)
+            print("Client connected:", clientInfo)
+
             with client:
-                # Get binary data from client
-                # data = client.recv(1024)      
-                # if data != b"":
-                    # print(data)     
-                    # client.sendall(data)
-                    
-                # Send car status to client
-                car_status = car.get_status().encode('utf-8')
-                client.sendall(car_status)
-                sleep(0.5)
-    except: 
-        print("\nClosing socket")
-        client.close()
-        s.close()
+                while True:
+                    try:
+                        # check if client still connected
+                        client.settimeout(0.5)
+                        data = client.recv(1024)
+                        if data == b'':
+                            print("Client disconnected")
+                            break
+                        elif data:
+                            print("Received:", data.decode())
+                        
+                        # send status
+                        car_status = car.get_status().encode('utf-8')
+                        print("Sending:", car_status)
+                        client.sendall(car_status)
+                        sleep(0.5)
+
+                    except socket.timeout:
+                        car_status = car.get_status().encode('utf-8')
+                        client.sendall(car_status)
+                        sleep(0.5)
+                    except (ConnectionResetError, BrokenPipeError):
+                        print("Client forcibly closed connection.")
+                        break
+
+    except KeyboardInterrupt:
+        print("\nShutting down server.")
     finally:
         car.px.stop()
-        
+        s.close()
