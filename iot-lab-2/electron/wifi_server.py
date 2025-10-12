@@ -38,17 +38,19 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print("server recv from: ", clientInfo)
             
             # Get binary data from client
-            data = client.recv(1024)      
-            if data != b"":
-                print(data)     
-                client.sendall(data)
+            # data = client.recv(1024)      
+            # if data != b"":
+                # print(data)     
+                # client.sendall(data)
                 
             # Send car status to client
             car_status = car.get_status().encode('utf-8')
             client.sendall(car_status)
             
     except: 
-        print("Closing socket")
+        print("\nClosing socket")
         client.close()
         s.close()
-        car.cl
+    finally:
+        car.px.stop()
+        
