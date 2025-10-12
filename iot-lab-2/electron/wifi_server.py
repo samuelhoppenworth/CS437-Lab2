@@ -2,9 +2,15 @@ import socket
 from time import sleep
 from picarx import Picarx
 from robot_hat.utils import get_battery_voltage
+import argparse
 
-HOST = "10.0.0.218"
-PORT = 65432
+parser = argparse.ArgumentParser(description='Start the Picarx server.')
+parser.add_argument('--host', type=str, default="10.0.0.218", help='The host IP address to bind to.')
+parser.add_argument('--port', type=int, default=65432, help='The port to listen on.')
+args = parser.parse_args()
+
+HOST = args.host
+PORT = args.port
 
 class Car:
     def __init__(self):

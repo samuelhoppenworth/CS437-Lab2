@@ -1,8 +1,8 @@
 import socket
 import time
 
-HOST = "10.0.0.218"  # Raspberry Pi IP
-PORT = 65432          # Same port as server
+HOST = input("Enter the Raspberry Pi's IP address or hostname: ")
+PORT = int(input("Enter the port number: "))
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
