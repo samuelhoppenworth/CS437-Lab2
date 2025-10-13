@@ -3,7 +3,6 @@ import threading
 from time import sleep
 from car import Car
 import argparse
-import bluetooth
 
 parser = argparse.ArgumentParser(description='Start the Picarx server.')
 parser.add_argument('--host', type=str, default="10.0.0.218", help='The host IP address to bind to.')
@@ -79,35 +78,39 @@ def broadcast_status(client_socket, car, connection_event):
 
 
 def main(): 
-    s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-    s.bind((hostMACAddress, port))
-    s.listen(backlog)
-    print("listening on port ", port)
-    car = Car()
+   with socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM) as server_socket:
+        server_socket.bind((HOST, PORT))
+        server_socket.listen()
+        car = Car()
+        print(f"Server listening on {HOST}:{PORT}")
 
-    try:
-        while 1:   
-            client, clientInfo = s.accept()
-            print("server recv from: ", clientInfo)
+        try:
+            while True:
+                client, clientInfo = server_socket.accept()
+                print(f"Client connected: {clientInfo}")
 
-            connection_active = threading.Event()
-            connection_active.set() 
+                # An Event object to safely signal between threads when the connection is lost
+                connection_active = threading.Event()
+                connection_active.set() 
 
-            command_thread = threading.Thread(
+                # Create and start threads
+                command_thread = threading.Thread(
                     target=handle_client_commands,
                     args=(client, car, connection_active)
                 )
-            status_thread = threading.Thread(
+                status_thread = threading.Thread(
                     target=broadcast_status,
                     args=(client, car, connection_active)
                 )
 
-            command_thread.start()
-            status_thread.start()
-            
- 
-    except: 
-        print("Closing socket")
-        client.close()
-        s.close()
+                command_thread.start()
+                status_thread.start()
 
+        except KeyboardInterrupt:
+            print("\nShutting down server.")
+        finally:
+            car.stop()
+            server_socket.close()
+
+if __name__ == "__main__":
+    main()
