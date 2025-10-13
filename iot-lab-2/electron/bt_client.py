@@ -1,5 +1,6 @@
 import socket
 import time
+import readchar 
 
 HOST = "DC:A6:32:80:7D:87" # The address of Raspberry PI Bluetooth adapter on the server.
 PORT = 1
@@ -17,6 +18,10 @@ with socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOM
                 break
             print("from server:", data.decode("utf-8"))
             time.sleep(0.1)
+            key = readchar.readkey()
+            key = key.lower()
+            s.sendall(key)
+
     except KeyboardInterrupt:
         print("\nClient exiting...")
     except socket.timeout:
