@@ -1,30 +1,41 @@
 import socket
 import time
-import readchar 
+import readchar
+import threading
 
-HOST = "DC:A6:32:80:7D:87" # The address of Raspberry PI Bluetooth adapter on the server.
-PORT = 1
+HOST = '88:a2:9e:03:ef:5d'
+PORT = 11
 
-with socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM) as s:
-    s.connect((HOST, PORT))
-    s.settimeout(5.0)
-    print(f"Connected to server {HOST}:{PORT}")
-
-    try:
-        while True:
-            data = s.recv(1024)
+def recv_thread(sock):
+    while True:
+        try:
+            data = sock.recv(1024)
             if not data:
                 print("Server closed connection.")
                 break
             print("from server:", data.decode("utf-8"))
-            time.sleep(0.1)
-            key = readchar.readkey()
-            key = key.lower()
-            s.sendall(key)
+        except Exception as e:
+            print("Receive error:", e)
+            break
 
+with socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM) as s:
+    s.connect((HOST, PORT))
+    print(f"Connected to server {HOST}:{PORT}")
+
+    threading.Thread(target=recv_thread, args=(s,), daemon=True).start()
+
+    keycode_map = {'w': 87, 's': 83, 'a': 65, 'd': 68}
+
+    try:
+        while True:
+            key = readchar.readkey().lower()
+            if key in keycode_map:
+                keycode = keycode_map[key]
+                s.sendall(str(keycode).encode())
+            elif key == 'q':  # optional quit key
+                print("Quitting...")
+                break
     except KeyboardInterrupt:
         print("\nClient exiting...")
-    except socket.timeout:
-        print("Timed out waiting for data.")
     finally:
         s.close()
